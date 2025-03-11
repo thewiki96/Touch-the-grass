@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Ad Skipper</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #video-container {
+      width: 640px;
+      height: 360px;
+      background-color: #000;
+      margin: 20px auto;
+      position: relative;
+      overflow: hidden;
+      transition: width 0.5s ease, height 0.5s ease;
+    }
+
+    .ad {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .ad-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .ad-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .ad-sponsor {
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .skip-button {
+      padding: 8px 16px;
+      background-color: rgba(255, 255, 255, 0.8);
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .skip-button:hover {
+      background-color: #fff;
+    }
+
+    .countdown {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    #score-container {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 24px;
+    }
+
+    #timer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    /* Start and End screens */
+    #start-screen,
+    #end-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* Default background – overridden for end screen below */
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 10;
+    }
+
+    #end-screen {
+      display: none;
+    }
+
+    .mode-button,
+    .restart-button {
+      padding: 15px 30px;
+      font-size: 20px;
+      background-color: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    .mode-button:hover,
+    .restart-button:hover {
+      background-color: #cc0000;
+    }
+
+    #game-mode-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    #game-mode-selection h2 {
+      margin-bottom: 10px;
+    }
+
+    #game-mode-selection p {
+      margin: 5px 0 15px 0;
+      font-size: 16px;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 5px;
+      background-color: red;
+    }
+
+    #music-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .music-button {
+      padding: 5px 10px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .music-button:hover {
+      background-color: #555;
+    }
+
+    #speed-indicator {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      z-index: 5;
+    }
+
+    /* Game controls (pause, restart, quit) */
+    #game-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 5;
+    }
+
+    .control-button {
+      padding: 8px 16px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .control-button:hover {
+      background-color: #555;
+    }
+
+    #stop-button {
+      background-color: #ff3300;
+    }
+
+    #restart-button {
+      background-color: #0066cc;
+    }
+
+    #quit-button {
+      background-color: #990000;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    /* --- New Landscape Background for End Screen --- */
+    #end-screen {
+      background-color: #000022; /* Dark blue night sky */
+      background-image: linear-gradient(
+        to bottom,
+        #000033 0%,
+        #000055 40%,
+        #003366 60%,
+        #006633 80%,
+        #00aa44 100%
+      );
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Stars */
+    #end-screen::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      background-image: radial-gradient(white 1px, transparent 0);
+      background-size: 50px 50px;
+      z-index: 1;
+    }
+
+    /* Moon */
+    #end-screen::after {
+      content: "";
+      position: absolute;
+      top: 50px;
+      right: 50px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #ffffee;
+      box-shadow: 0 0 20px 5px rgba(255, 255, 238, 0.5);
+      z-index: 2;
+    }
+
+    /* Ensure text and button appear above the background */
+    #end-screen h1,
+    #end-screen p,
+    #end-screen button {
+      position: relative;
+      z-index: 5;
+    }
+
+    #end-screen h1 {
+      font-size: 48px;
+      margin-bottom: 100px;
+      text-shadow: 2px 2px 4px #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="music-controls">
+      <button class="music-button" id="toggle-music">Music: Off</button>
+      <button class="music-button" id="toggle-effects">Sound FX: Off</button>
+    </div>
+
+    <div id="timer">60</div>
+    <div id="video-container"></div>
+    <div id="speed-indicator">Speed: 1.0x</div>
+    <!-- Game controls -->
+    <div id="game-controls" style="display: none;">
+      <button class="control-button" id="stop-button">Pause</button>
+      <button class="control-button" id="restart-button">Restart</button>
+      <button class="control-button" id="quit-button">Quit</button>
+    </div>
+    <div id="score-container">Score: <span id="score">0</span></div>
+
+    <div id="start-screen">
+      <h1>YouTube Ad Skipper</h1>
+      <p>Click on the "Skip Ad" buttons as quickly as possible!</p>
+      <div id="game-mode-selection">
+        <h2>Select Game Mode:</h2>
+        <button class="mode-button" id="timed-mode">Timed Mode</button>
+        <p>You have 60 seconds. How many ads can you skip?</p>
+        <button class="mode-button" id="survival-mode">Survival Mode</button>
+        <p>Skip ads until the screen fills up. How long can you survive?</p>
+      </div>
+    </div>
+
+    <!-- Updated End Screen with new text and layout -->
+    <div id="end-screen">
+      <h1>TOUCH THE GRASS</h1>
+      <p>Your final score: <span id="final-score">0</span></p>
+      <button class="restart-button">Play Again</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script>
+    // Wait for document to be fully loaded
+    document.addEventListener('DOMContentLoaded', function () {
+      console.log("DOM fully loaded");
+
+      // Game variables
+      let score = 0;
+      let timeLeft = 60;
+      let gameInterval;
+      let adInterval;
+      let isGameRunning = false;
+      let gameSpeed = 1; // Speed multiplier that increases over time
+      let difficultyInterval; // Interval for increasing difficulty
+      let gameMode = "timed"; // Default game mode
+      let adCheckInterval; // Interval for checking ad coverage in survival mode
+      let adCoverageLimit = 0.75; // Screen coverage limit (75%)
+      let gameStartTime;
+      let semitoneShift = 0;
+
+      // Pause/Resume variables
+      let isPaused = false;
+      let savedIntervals = {};
+
+      // Media variables
+      let musicPlaying = false;
+      let effectsEnabled = false;
+      let synth;
+      let bassSubSynth;
+      let drumSynth;
+      let loopId;
+      let currentBeat = 0;
+
+      // DOM elements
+      const videoContainer = document.getElementById('video-container');
+      const scoreElement = document.getElementById('score');
+      const finalScoreElement = document.getElementById('final-score');
+      const timerElement = document.getElementById('timer');
+      const startScreen = document.getElementById('start-screen');
+      const endScreen = document.getElementById('end-screen');
+      const timedModeButton = document.getElementById('timed-mode');
+      const survivalModeButton = document.getElementById('survival-mode');
+      const restartButton = document.querySelector('.restart-button');
+      const toggleMusicButton = document.getElementById('toggle-music');
+      const toggleEffectsButton = document.getElementById('toggle-effects');
+      const speedIndicator = document.getElementById('speed-indicator');
+      // New control elements
+      const gameControls = document.getElementById('game-controls');
+      const stopButton = document.getElementById('stop-button');
+      const gameRestartButton = document.getElementById('restart-button');
+      const quitButton = document.getElementById('quit-button');
+
+      // Music patterns for 8-bit style inspired by Despacito rhythm (not the actual melody)
+      const melodyPattern = [
+        ["G4", "B4", "-", "D5"],
+        ["D5", "-", "C5", "-"],
+        ["B4", "-", "G4", "-"],
+        ["A4", "B4", "A4", "G4"]
+      ];
+
+      const bassPattern = [
+        ["G2", "-", "G2", "-"],
+        ["D2", "-", "D2", "-"],
+        ["E2", "-", "E2", "-"],
+        ["D2", "-", "D2", "-"]
+      ];
+
+      const drumPattern = [
+        [1, 0, 1, 0],
+        [0, 1, 0, 1],
+        [1, 0, 1, 0],
+        [0, 1, 1, 1]
+      ];
+
+      // Ad types
+      const adTypes = [
+        { title: "Try Premium Plus", sponsor: "Streaming Service", absurd: false },
+        { title: "New Electric Car", sponsor: "Auto Manufacturer", absurd: false },
+        { title: "Amazing Weight Loss", sponsor: "Health Supplement", absurd: false },
+        { title: "Free Credit Score", sponsor: "Finance App", absurd: false },
+        { title: "Download Now!", sponsor: "Mobile Game", absurd: false },
+        { title: "Shop the Sale", sponsor: "Online Store", absurd: false },
+        { title: "Limited Time Offer", sponsor: "Food Delivery", absurd: false },
+        { title: "Join Today", sponsor: "Online Course", absurd: false },
+        { title: "Neural Ad Blocker Pro", sponsor: "BrainSync Technologies", absurd: false },
+        { title: "Buy Virtual Real Estate", sponsor: "MetaWorld Properties", absurd: false },
+        { title: "AI Companion Upgrade", sponsor: "Emotional Intelligence Inc", absurd: false },
+        { title: "Drone Delivery Subscription", sponsor: "AirDrop Express", absurd: false },
+        { title: "Carbon Credit Exchange", sponsor: "ClimateToken™", absurd: false },
+        { title: "Personalized Weather Shield", sponsor: "WeatherMod", absurd: false },
+        {
+          title: "CONGRATULATIONS! You've Been Selected to Experience Our Revolutionary Quantum-Infused Subscription Service That Literally Does Nothing But Charge Your Account Monthly While Pretending to Revolutionize Your Life",
+          sponsor: "Void Industries",
+          absurd: true
+        },
+        {
+          title: "This Advertisement Is Legally Required to Inform You That It Is Collecting Your Eye Movement Data While Simultaneously Marketing an Anti-Eye-Tracking Service",
+          sponsor: "Surveillance Solutions",
+          absurd: true
+        },
+        {
+          title: "Tired of Ads? Our New Meta-Ad-Subscription Replaces All Your Ads With Different Ads That Make You Feel Superior For Seeing Special Ads",
+          sponsor: "CircularLogic Media",
+          absurd: true
+        },
+        {
+          title: "URGENT: Your Attention Economy Credits Are Expiring in 5 Minutes! Watch 17 More Ads to Earn Enough Points to Skip One Ad Tomorrow Maybe",
+          sponsor: "AttentionBank",
+          absurd: true
+        },
+        {
+          title: "This Product Doesn't Exist But Our Marketing AI Insisted People Would Buy It So Now We're Legally Obligated to Collect Pre-Orders",
+          sponsor: "VaporwareVentures",
+          absurd: true
+        }
+      ];
+
+      // Initialize Tone.js audio
+      function initAudio() {
+        synth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "square" },
+          envelope: { attack: 0.02, decay: 0.1, sustain: 0.2, release: 0.1 }
+        }).toDestination();
+
+        bassSubSynth = new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 0.2 }
+        }).toDestination();
+
+        drumSynth = new Tone.NoiseSynth({
+          noise: { type: "white" },
+          envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+        }).toDestination();
+
+        synth.volume.value = -10;
+        bassSubSynth.volume.value = -6;
+        drumSynth.volume.value = -15;
+      }
+
+      // Function to transpose a note by a number of semitones
+      function transposePitch(noteStr, semitones) {
+        if (noteStr === "-") return "-";
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteName = noteStr.replace(/[0-9]/g, '');
+        const octave = parseInt(noteStr.match(/[0-9]/)[0]);
+        const noteIndex = notes.indexOf(noteName);
+        if (noteIndex === -1) return noteStr;
+        let newIndex = (noteIndex + semitones) % 12;
+        if (newIndex < 0) newIndex += 12;
+        let newOctave = octave + Math.floor((noteIndex + semitones) / 12);
+        if (semitones < 0 && (noteIndex + semitones) % 12 !== newIndex) {
+          newOctave--;
+        }
+        newOctave = Math.min(8, Math.max(1, newOctave));
+        return notes[newIndex] + newOctave;
+      }
+
+      // Current tempo variable and update function
+      let currentTempo = 120;
+      function updateMusicTempo() {
+        currentTempo = Math.min(220, Math.floor(120 * gameSpeed));
+      }
+
+      // Play background music using Tone.js
+      function playMusic() {
+        if (!musicPlaying) return;
+        const beatLength = 60 / currentTempo;
+        const currentMeasure = Math.floor(currentBeat / 4) % 4;
+        const currentNote = currentBeat % 4;
+        if (melodyPattern[currentMeasure][currentNote] !== "-") {
+          let note = melodyPattern[currentMeasure][currentNote];
+          note = transposePitch(note, semitoneShift);
+          if (gameSpeed > 1.5 && Math.random() > 0.5) {
+            const noteName = note.slice(0, -1);
+            const octave = parseInt(note.slice(-1));
+            const newOctave = Math.min(7, octave + (gameSpeed > 2 ? 1 : 0));
+            note = noteName + newOctave;
+          }
+          synth.triggerAttackRelease(note, "8n");
+        }
+        if (bassPattern[currentMeasure][currentNote] !== "-") {
+          let bassNote = bassPattern[currentMeasure][currentNote];
+          bassNote = transposePitch(bassNote, semitoneShift);
+          bassSubSynth.triggerAttackRelease(bassNote, "8n");
+        }
+        if (drumPattern[currentMeasure][currentNote] || (gameSpeed > 1.8 && Math.random() > 0.6)) {
+          drumSynth.triggerAttackRelease("16n");
+          if (gameSpeed > 2.5 && Math.random() > 0.7) {
+            setTimeout(() => {
+              drumSynth.triggerAttackRelease("32n");
+            }, beatLength * 250);
+          }
+        }
+        currentBeat = (currentBeat + 1) % 16;
+        loopId = setTimeout(playMusic, beatLength * 1000 / 2);
+      }
+
+      // Sound effects
+      function playSkipSound() {
+        if (!effectsEnabled) return;
+        const skipSynth = new Tone.Synth({
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+        }).toDestination();
+        skipSynth.volume.value = -10;
+        skipSynth.triggerAttackRelease("C6", "16n");
+        setTimeout(() => skipSynth.triggerAttackRelease("G6", "16n"), 50);
+      }
+
+      function playCountdownSound() {
+        if (!effectsEnabled) return;
+        const countSynth = new Tone.Synth({
+          oscillator: { type: "square" },
+          envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.05 }
+        }).toDestination();
+        countSynth.volume.value = -20;
+        countSynth.triggerAttackRelease("E5", "32n");
+      }
+
+      // Calculate ad coverage
+      function calculateAdCoverage() {
+        const allAds = videoContainer.querySelectorAll('.ad');
+        let totalAdArea = 0;
+        allAds.forEach(ad => {
+          const width = parseInt(ad.style.width);
+          const height = parseInt(ad.style.height);
+          totalAdArea += width * height;
+        });
+        const containerArea = videoContainer.offsetWidth * videoContainer.offsetHeight;
+        return totalAdArea / containerArea;
+      }
+
+      function checkAdCoverage() {
+        if (!isGameRunning || gameMode !== "survival") return;
+        const coverage = calculateAdCoverage();
+        speedIndicator.textContent = `Coverage: ${Math.floor(coverage * 100)}%`;
+        if (coverage >= adCoverageLimit) {
+          endGame();
+        }
+      }
+
+      // Increase difficulty over time
+      function increaseDifficulty() {
+        if (!isGameRunning) return;
+        gameSpeed += 0.1;
+        semitoneShift++;
+        const currentWidth = parseInt(videoContainer.style.width || '640');
+        const currentHeight = parseInt(videoContainer.style.height || '360');
+        const newWidth = Math.min(window.innerWidth * 0.95, currentWidth + 15);
+        const newHeight = Math.min(window.innerHeight * 0.7, currentHeight + 10);
+        videoContainer.style.width = newWidth + 'px';
+        videoContainer.style.height = newHeight + 'px';
+        updateAdInterval();
+        if (musicPlaying) {
+          updateMusicTempo();
+        }
+        const speedIndicatorFlash = document.createElement('div');
+        speedIndicatorFlash.style.position = 'absolute';
+        speedIndicatorFlash.style.top = '50%';
+        speedIndicatorFlash.style.left = '50%';
+        speedIndicatorFlash.style.transform = 'translate(-50%, -50%)';
+        speedIndicatorFlash.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+        speedIndicatorFlash.style.color = 'white';
+        speedIndicatorFlash.style.padding = '10px';
+        speedIndicatorFlash.style.borderRadius = '5px';
+        speedIndicatorFlash.style.fontWeight = 'bold';
+        speedIndicatorFlash.style.zIndex = '100';
+        speedIndicatorFlash.textContent = 'SPEED UP!';
+        document.getElementById('game-container').appendChild(speedIndicatorFlash);
+        setTimeout(() => {
+          if (document.getElementById('game-container').contains(speedIndicatorFlash)) {
+            document.getElementById('game-container').removeChild(speedIndicatorFlash);
+          }
+        }, 1000);
+      }
+
+      // Update ad generation interval based on game speed
+      function updateAdInterval() {
+        if (adInterval) {
+          clearInterval(adInterval);
+        }
+        const newInterval = Math.max(500, Math.floor(2000 / gameSpeed));
+        adInterval = setInterval(createAd, newInterval);
+      }
+
+      // Toggle music on/off
+      function toggleMusic() {
+        if (!musicPlaying) {
+          musicPlaying = true;
+          toggleMusicButton.textContent = "Music: On";
+          if (!synth) {
+            initAudio();
+          }
+          Tone.start();
+          currentBeat = 0;
+          playMusic();
+        } else {
+          musicPlaying = false;
+          toggleMusicButton.textContent = "Music: Off";
+          clearTimeout(loopId);
+        }
+      }
+
+      // Toggle sound effects
+      function toggleEffects() {
+        effectsEnabled = !effectsEnabled;
+        toggleEffectsButton.textContent = `Sound FX: ${effectsEnabled ? "On" : "Off"}`;
+      }
+
+      // Update timer for timed mode
+      function updateTimer() {
+        timeLeft--;
+        timerElement.textContent = timeLeft;
+        if (gameMode === "timed") {
+          speedIndicator.textContent = `Speed: ${gameSpeed.toFixed(1)}x`;
+        }
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }
+
+      // Create an ad element
+      function createAd() {
+        if (!isGameRunning) return;
+        const ad = document.createElement('div');
+        ad.className = 'ad';
+        const maxX = videoContainer.offsetWidth - 200;
+        const maxY = videoContainer.offsetHeight - 120;
+        const posX = Math.floor(Math.random() * maxX);
+        const posY = Math.floor(Math.random() * maxY);
+        const adType = adTypes[Math.floor(Math.random() * adTypes.length)];
+        let width, height;
+        const sizeMultiplier = 1 + (gameSpeed - 1) * 0.5;
+        if (adType.absurd) {
+          width = Math.floor((Math.floor(Math.random() * 150) + 300) * sizeMultiplier);
+          height = Math.floor((Math.floor(Math.random() * 100) + 150) * sizeMultiplier);
+          const colors = ['#ff00ff', '#00ffff', '#ff9900', '#33ff33'];
+          const flashColor = colors[Math.floor(Math.random() * colors.length)];
+          ad.style.border = `3px solid ${flashColor}`;
+          ad.style.boxShadow = `0 0 10px ${flashColor}`;
+          if (gameSpeed > 1.5) {
+            const extraEffects = [
+              'animation: spin 2s linear infinite;',
+              'animation: pulse 1s ease-in-out infinite;',
+              'filter: hue-rotate(' + (Math.floor(Math.random() * 360)) + 'deg);'
+            ];
+            if (gameSpeed > 2) {
+              ad.style.cssText += extraEffects[Math.floor(Math.random() * extraEffects.length)];
+            }
+          }
+        } else {
+          width = Math.floor((Math.floor(Math.random() * 100) + 200) * (1 + (gameSpeed - 1) * 0.3));
+          height = Math.floor((Math.floor(Math.random() * 50) + 120) * (1 + (gameSpeed - 1) * 0.3));
+        }
+        ad.style.left = posX + 'px';
+        ad.style.top = posY + 'px';
+        ad.style.width = width + 'px';
+        ad.style.height = height + 'px';
+
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+        progressBar.style.width = '0%';
+
+        const adContent = document.createElement('div');
+        adContent.className = 'ad-content';
+
+        const adTitle = document.createElement('div');
+        adTitle.className = 'ad-title';
+        adTitle.textContent = adType.title;
+
+        if (adType.absurd) {
+          adTitle.style.fontSize = '14px';
+          adTitle.style.lineHeight = '1.2';
+          adTitle.style.fontWeight = '700';
+          adTitle.style.textTransform = 'uppercase';
+          const effects = [
+            'color: #ff00ff; text-shadow: 2px 2px #00ffff;',
+            'background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff); -webkit-background-clip: text; background-clip: text; color: transparent;',
+            'animation: blink 0.5s infinite;'
+          ];
+          adTitle.style.cssText += effects[Math.floor(Math.random() * effects.length)];
+        }
+
+        const adSponsor = document.createElement('div');
+        adSponsor.className = 'ad-sponsor';
+        adSponsor.textContent = 'Ad · ' + adType.sponsor;
+
+        if (adType.absurd) {
+          const disclaimers = [
+            "Warning: May cause existential dread",
+            "Side effects include: questioning reality",
+            "Not FDA approved or even logically possible",
+            "Viewed by 0% of humans ever",
+            "This ad exists in 47 dimensions simultaneously"
+          ];
+          const disclaimer = document.createElement('div');
+          disclaimer.style.fontSize = '8px';
+          disclaimer.style.opacity = '0.7';
+          disclaimer.style.fontStyle = 'italic';
+          disclaimer.textContent = disclaimers[Math.floor(Math.random() * disclaimers.length)];
+          adContent.appendChild(disclaimer);
+        }
+
+        const skipButton = document.createElement('button');
+        skipButton.className = 'skip-button';
+        const baseCountdown = Math.floor(Math.random() * 3) + 3;
+        let countdownValue = adType.absurd ? baseCountdown + 2 : baseCountdown;
+        const adjustedInterval = 1000 / gameSpeed;
+        skipButton.textContent = `Skip Ad in ${countdownValue}`;
+        skipButton.disabled = true;
+
+        const countdown = setInterval(() => {
+          countdownValue--;
+          if (countdownValue > 0) {
+            skipButton.textContent = `Skip Ad in ${countdownValue}`;
+            progressBar.style.width = ((baseCountdown - countdownValue) / baseCountdown * 100) + '%';
+            playCountdownSound();
+          } else {
+            if (adType.absurd && Math.random() > 0.5) {
+              const absurdSkipTexts = [
+                "Skip (Maybe)",
+                "Skip (For Real This Time)",
+                "Please Skip Me",
+                "Skip If You Dare",
+                "Click To Continue Being Advertised To"
+              ];
+              skipButton.textContent = absurdSkipTexts[Math.floor(Math.random() * absurdSkipTexts.length)];
+            } else {
+              skipButton.textContent = 'Skip Ad';
+            }
+            skipButton.disabled = false;
+            progressBar.style.width = '100%';
+            progressBar.style.backgroundColor = adType.absurd ? '#ff00ff' : 'yellow';
+            clearInterval(countdown);
+          }
+        }, adjustedInterval);
+
+        skipButton.addEventListener('click', function () {
+          if (!skipButton.disabled) {
+            let points = adType.absurd ? 3 : 1;
+            points = Math.ceil(points * (gameSpeed * 1.2));
+            score += points;
+            scoreElement.textContent = score;
+            const pointPopup = document.createElement('div');
+            pointPopup.textContent = `+${points}`;
+            pointPopup.style.position = 'absolute';
+            pointPopup.style.left = (parseInt(ad.style.left) + parseInt(ad.style.width) / 2) + 'px';
+            pointPopup.style.top = (parseInt(ad.style.top) - 20) + 'px';
+            pointPopup.style.color = adType.absurd ? '#ff00ff' : '#ffff00';
+            pointPopup.style.fontWeight = 'bold';
+            pointPopup.style.fontSize = '24px';
+            pointPopup.style.zIndex = '100';
+            pointPopup.style.textShadow = '2px 2px 0 #000';
+            pointPopup.style.transition = 'all 0.5s ease-out';
+            pointPopup.style.opacity = '1';
+            videoContainer.appendChild(pointPopup);
+            setTimeout(() => {
+              pointPopup.style.transform = 'translateY(-30px)';
+              pointPopup.style.opacity = '0';
+            }, 50);
+            setTimeout(() => {
+              if (videoContainer.contains(pointPopup)) {
+                videoContainer.removeChild(pointPopup);
+              }
+            }, 600);
+            videoContainer.removeChild(ad);
+            playSkipSound();
+            clearInterval(countdown);
+          }
+        });
+
+        setTimeout(() => {
+          if (videoContainer.contains(ad)) {
+            videoContainer.removeChild(ad);
+          }
+        }, 8000);
+
+        adContent.appendChild(adTitle);
+        adContent.appendChild(adSponsor);
+        adContent.appendChild(skipButton);
+        ad.appendChild(adContent);
+        ad.appendChild(progressBar);
+        videoContainer.appendChild(ad);
+      }
+
+      // Pause/Resume functions
+      function pauseGame() {
+        if (!isGameRunning || isPaused) return;
+        isPaused = true;
+        stopButton.textContent = "Resume";
+        savedIntervals.gameInterval = gameInterval;
+        savedIntervals.adInterval = adInterval;
+        savedIntervals.difficultyInterval = difficultyInterval;
+        clearInterval(gameInterval);
+        clearInterval(adInterval);
+        clearInterval(difficultyInterval);
+        if (gameMode === "survival") {
+          savedIntervals.adCheckInterval = adCheckInterval;
+          clearInterval(adCheckInterval);
+        }
+        if (musicPlaying) {
+          savedIntervals.loopId = loopId;
+          clearTimeout(loopId);
+        }
+        const pauseOverlay = document.createElement('div');
+        pauseOverlay.id = 'pause-overlay';
+        pauseOverlay.style.position = 'absolute';
+        pauseOverlay.style.top = '0';
+        pauseOverlay.style.left = '0';
+        pauseOverlay.style.width = '100%';
+        pauseOverlay.style.height = '100%';
+        pauseOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        pauseOverlay.style.display = 'flex';
+        pauseOverlay.style.alignItems = 'center';
+        pauseOverlay.style.justifyContent = 'center';
+        pauseOverlay.style.zIndex = '5';
+        pauseOverlay.style.color = 'white';
+        pauseOverlay.style.fontSize = '24px';
+        pauseOverlay.textContent = "PAUSED";
+        videoContainer.appendChild(pauseOverlay);
+      }
+
+      function resumeGame() {
+        if (!isGameRunning || !isPaused) return;
+        isPaused = false;
+        stopButton.textContent = "Pause";
+        const pauseOverlay = document.getElementById('pause-overlay');
+        if (pauseOverlay) {
+          videoContainer.removeChild(pauseOverlay);
+        }
+        if (gameMode === "timed") {
+          gameInterval = setInterval(updateTimer, 1000);
+        }
+        adInterval = setInterval(createAd, Math.max(500, Math.floor(2000 / gameSpeed)));
+        difficultyInterval = setInterval(increaseDifficulty, 5000);
+        if (gameMode === "survival") {
+          adCheckInterval = setInterval(checkAdCoverage, 500);
+        }
+        if (musicPlaying) {
+          playMusic();
+        }
+      }
+
+      function restartCurrentGame() {
+        if (isPaused) {
+          resumeGame();
+        }
+        endCurrentGame(false);
+        startGame();
+      }
+
+      function quitToMenu() {
+        if (isPaused) {
+          resumeGame();
+        }
+        endCurrentGame(false);
+        resetGame();
+      }
+
+      // Modified end game function – this handles stopping intervals and showing the end screen
+      function endCurrentGame(showEndScreen = true) {
+        isGameRunning = false;
+        isPaused = false;
+        gameControls.style.display = 'none';
+        clearInterval(gameInterval);
+        clearInterval(adInterval);
+        clearInterval(difficultyInterval);
+        if (gameMode === "survival") {
+          clearInterval(adCheckInterval);
+        }
+        if (loopId) {
+          clearTimeout(loopId);
+        }
+        if (showEndScreen) {
+          const modeText = document.createElement('p');
+          modeText.textContent = gameMode === "timed" ? "Timed Mode" : "Survival Mode";
+          const finalSpeed = document.createElement('p');
+          finalSpeed.textContent = `Final Speed: ${gameSpeed.toFixed(1)}x`;
+          let survivalTimeElement;
+          if (gameMode === "survival") {
+            const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
+            survivalTimeElement = document.createElement('p');
+            survivalTimeElement.textContent = `Survival Time: ${elapsedSeconds} seconds`;
+          }
+          const endScreenTitle = endScreen.querySelector('h1');
+          const existingGameInfo = endScreen.querySelectorAll('p:not(:last-child)');
+          existingGameInfo.forEach(el => {
+            if (el !== endScreen.querySelector('p:last-child')) {
+              el.remove();
+            }
+          });
+          endScreenTitle.insertAdjacentElement('afterend', modeText);
+          if (gameMode === "survival") {
+            modeText.insertAdjacentElement('afterend', survivalTimeElement);
+          }
+          if (survivalTimeElement) {
+            survivalTimeElement.insertAdjacentElement('afterend', finalSpeed);
+          } else {
+            modeText.insertAdjacentElement('afterend', finalSpeed);
+          }
+          finalScoreElement.textContent = score;
+          endScreen.style.display = 'flex';
+        }
+      }
+
+      // Updated endGame function that plays ambient music before ending the game
+      function endGame() {
+        if (!synth) {
+          initAudio();
+        }
+        const ambientSynth = new Tone.PolySynth().toDestination();
+        ambientSynth.volume.value = -15;
+        Tone.start();
+        ambientSynth.triggerAttackRelease(["E3", "B3", "E4"], "4n");
+        setTimeout(() => {
+          ambientSynth.triggerAttackRelease(["G3", "D4", "G4"], "4n");
+        }, 1000);
+
+        endCurrentGame(true);
+      }
+
+      // Start game function
+      function startGame() {
+        if (!synth) {
+          initAudio();
+        }
+        gameStartTime = Date.now();
+        semitoneShift = 0;
+        document.getElementById('music-controls').style.display = 'flex';
+        startScreen.style.display = 'none';
+        isGameRunning = true;
+        score = 0;
+        scoreElement.textContent = score;
+        if (gameMode === "timed") {
+          timeLeft = 60;
+          timerElement.textContent = timeLeft;
+          timerElement.style.display = 'block';
+          speedIndicator.textContent = 'Speed: 1.0x';
+          gameInterval = setInterval(updateTimer, 1000);
+        } else {
+          timerElement.style.display = 'none';
+          speedIndicator.textContent = 'Coverage: 0%';
+          adCheckInterval = setInterval(checkAdCoverage, 500);
+        }
+        videoContainer.style.width = '640px';
+        videoContainer.style.height = '360px';
+        gameSpeed = 1.0;
+        updateAdInterval();
+        createAd();
+        difficultyInterval = setInterval(increaseDifficulty, 5000);
+        // Show game controls when game starts
+        gameControls.style.display = 'flex';
+      }
+
+      // Reset game to start screen
+      function resetGame() {
+        endScreen.style.display = 'none';
+        startScreen.style.display = 'flex';
+        while (videoContainer.firstChild) {
+          videoContainer.removeChild(videoContainer.firstChild);
+        }
+      }
+
+      // Event listeners
+      timedModeButton.addEventListener('click', function () {
+        console.log("Timed mode clicked");
+        gameMode = "timed";
+        startGame();
+      });
+
+      survivalModeButton.addEventListener('click', function () {
+        console.log("Survival mode clicked");
+        gameMode = "survival";
+        startGame();
+      });
+
+      restartButton.addEventListener('click', resetGame);
+
+      toggleMusicButton.addEventListener('click', toggleMusic);
+      toggleEffectsButton.addEventListener('click', toggleEffects);
+
+      // New control buttons event listeners
+      stopButton.addEventListener('click', function () {
+        if (isPaused) {
+          resumeGame();
+        } else {
+          pauseGame();
+        }
+      });
+
+      gameRestartButton.addEventListener('click', restartCurrentGame);
+      quitButton.addEventListener('click', quitToMenu);
+
+      console.log("Game initialized successfully!");
+    });
+  </script>
+</body>
+</html>
